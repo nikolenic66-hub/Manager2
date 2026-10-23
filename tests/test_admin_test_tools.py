@@ -42,7 +42,7 @@ def test_match_canvas_uses_api_match_props_and_real_score_clock():
     canvas = (ROOT / 'mini_app' / 'src' / 'components' / 'MatchCanvas.tsx').read_text()
     screen = (ROOT / 'mini_app' / 'src' / 'ClubScreen.tsx').read_text()
     assert 'type MatchCanvasProps = { match: NextMatch | null }' in canvas
-    assert 'match.home_score' in canvas and 'match.current_minute' in canvas
+    assert 'match?.home_score' in canvas and 'match?.current_minute' in canvas
     assert '<MatchCanvas match={nextMatch}/>' in screen
 
 
@@ -55,4 +55,4 @@ def test_existing_connection_and_loading_fixes_remain_present():
     assert 'connect_args={"statement_cache_size": 0}' in db
     unlock = worker.split('pg_advisory_unlock(hashtext', 1)[1].split('finally:', 1)[0]
     assert 'except Exception' in unlock
-    assert 'src="/football.png"' in loading
+    assert 'src="/game-splash.png"' in loading

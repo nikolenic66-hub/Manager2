@@ -46,8 +46,8 @@ def test_friendly_and_test_match_share_authorized_simulation_endpoint():
     assert "league_id,season_id,round,home_club_id,away_club_id" in block
     assert "status='FINISHED'" in block  # idempotent reuse also recognises recently finished tests
     assert "league_id=NULL" in block or "VALUES(NULL,NULL,0" in block
-    assert "🤝 Товарищеский матч" in UI
-    assert "🧪 Запустить тестовый матч" in UI
+    assert "playFriendlyMatch('friendly')" in UI
+    assert "playFriendlyMatch('test')" in UI
 
 
 def test_calendar_last_result_and_prematch_bench_are_connected():
@@ -81,7 +81,8 @@ def test_live_match_actions_are_authenticated_and_persisted():
     assert "INSERT INTO match_events" in SERVER
     assert "getLiveMatchLineup" in API
     assert "substituteLivePlayer" in UI and "updateLiveMatchTactics" in UI
-    assert "setTeams(matchRef.current.home_club_id, matchRef.current.away_club_id)" in (ROOT / "mini_app" / "src" / "components" / "MatchCanvas.tsx").read_text(encoding="utf-8")
+    engine_scene = (ROOT / "mini_app" / "src" / "game" / "MatchScene.ts").read_text(encoding="utf-8")
+    assert "this.setTeams(match.home_club_id, match.away_club_id)" in engine_scene
 
 
 def test_division_tier_is_returned_and_rendered():
@@ -121,8 +122,9 @@ def test_tournaments_are_disabled_and_live_commentator_remains_available():
     scene = (ROOT / "mini_app" / "src" / "game" / "MatchScene.ts").read_text(encoding="utf-8")
     assert "update(_time: number, delta: number)" in scene
     # Autonomous movement must be frame-driven and must not restart in 2.2s batches.
-    assert "this.movementElapsed += frameDelta" in scene
-    assert "this.animateOffBallMovement(frameDelta)" in scene
-    assert "const smoothing = 1 - Math.exp(-delta / 180)" in scene
+    assert "this.accumulator += frame;" in scene
+    assert "const fixedStep = 1 / 60;" in scene
+    assert "this.stepSimulation(fixedStep);" in scene and "this.advanceBall(frame);" in scene
+    assert "motion.elapsed += delta;" in scene and "const t = motion.kind === 'SHOT'" in scene
     assert "this.movementElapsed >= 2200" not in scene
-    assert "const isPass = kind.includes('PASS') || kind.includes('CROSS')" in scene
+    assert "kind === 'PASS' || kind === 'CROSS' || kind === 'INTERCEPTION'" in scene

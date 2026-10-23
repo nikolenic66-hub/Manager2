@@ -150,6 +150,9 @@ export class MatchScene extends Phaser.Scene {
   private gameTime = 0;
   private accumulator = 0;
   private hasInitialSnapshot = false;
+  private activeMatchId: number | null = null;
+  private pendingSnapshot: NextMatch | null = null;
+  private pendingSnapshotReady = false;
   private processedEvents = new Set<string>();
   private eventQueue: VisualEvent[] = [];
   private nextEventAt = 0;
@@ -192,9 +195,23 @@ export class MatchScene extends Phaser.Scene {
     });
   }
 
-  /** Consume a fresh API snapshot without resetting scene, players, clock or tweens. */
+  /**
+   * Queue API data for the next Phaser frame. React/network callbacks never touch
+   * display objects directly; the simulation consumes one latest snapshot from
+   * its own loop. Multiple polls inside one frame collapse into the newest state.
+   */
   syncSnapshot(match: NextMatch | null) {
     if (!match) return;
+    this.pendingSnapshot = match;
+    this.pendingSnapshotReady = true;
+  }
+
+  private applySnapshot(match: NextMatch) {
+    const nextMatchId = finite(match.id);
+    if (nextMatchId !== null && this.activeMatchId !== null && nextMatchId !== this.activeMatchId) {
+      this.resetForNewMatch();
+    }
+    if (nextMatchId !== null) this.activeMatchId = nextMatchId;
     this.setTeams(match.home_club_id, match.away_club_id);
     const homePossession = finite(match.home_possession);
     if (homePossession !== null) this.homePossession = clamp(homePossession, 0, 100);
@@ -256,6 +273,45 @@ export class MatchScene extends Phaser.Scene {
     this.trimProcessedEvents();
   }
 
+  /** Reset match state while retaining the Phaser Game, Scene, field and canvas. */
+  private resetForNewMatch() {
+    this.processedEvents.clear();
+    this.eventQueue = [];
+    this.nextEventAt = 0;
+    this.ballMotion = null;
+    this.settlingEvent = null;
+    this.possessionSide = null;
+    this.carrier = null;
+    this.pendingGoalSide = null;
+    this.pendingGoalOutcome = '';
+    this.lastGoalAt = -10000;
+    this.lastGoalSide = null;
+    this.homeShots = 0;
+    this.awayShots = 0;
+    this.homePossession = 50;
+    this.celebrationUntil = 0;
+    this.hasInitialSnapshot = false;
+    this.gameTime = 0;
+    this.accumulator = 0;
+    this.tweens.killAll();
+
+    for (const actor of [...this.homePlayers, ...this.awayPlayers]) {
+      actor.pos = { ...actor.anchor };
+      actor.velocity = { x: 0, y: 0 };
+      actor.target = { ...actor.anchor };
+      actor.actionTarget = null;
+      actor.actionUntil = 0;
+      actor.retiring = false;
+      actor.container.setAlpha(1).setVisible(true).setRotation(0);
+      const point = this.toScreen(actor.pos);
+      actor.container.setPosition(point.x, point.y);
+    }
+    this.setBallPosition({ x: 50, y: 50 }, 0);
+    this.eventBadge?.setVisible(false);
+    this.eventBadgeText?.setText('');
+    this.possessionText?.setText('ВЛАДЕНИЕ  ·  50%');
+  }
+
   setTeams(homeClubId: number, awayClubId: number) {
     this.homeClubId = Number(homeClubId) || null;
     this.awayClubId = Number(awayClubId) || null;
@@ -298,22 +354,36 @@ export class MatchScene extends Phaser.Scene {
       const anchor = this.slotForSide(slot, side);
       if (!actor) actor = this.createActor(side, i, slot, anchor, player);
       claimed.add(actor);
+      const previousPlayerId = actor.playerId;
+      const wasKeeper = actor.keeper;
       actor.side = side;
       actor.index = i;
       actor.role = String(player?.role || slot.role || player?.position || 'CM').toUpperCase();
       actor.keeper = actor.role === 'GK' || slot.role === 'GK';
+      if (wasKeeper !== actor.keeper) this.updateActorKit(actor, side, actor.keeper);
       actor.anchor = anchor;
       if (player) {
-        actor.playerId = Number(player.id);
+        const nextPlayerId = Number(player.id);
+        // Substitutions reuse a visual actor to avoid a full scene rebuild. Clear
+        // the outgoing player's map entry before assigning the actor to the
+        // incoming player, or later events can animate the wrong player's body.
+        if (previousPlayerId !== null && previousPlayerId !== nextPlayerId
+            && this.playerActors.get(previousPlayerId) === actor) {
+          this.playerActors.delete(previousPlayerId);
+        }
+        actor.playerId = nextPlayerId;
         actor.playerName = String(player.name || player.role || 'Игрок');
         actor.nameText.setText(actor.playerName);
         actor.numberText.setText(String(i + 1));
-        this.playerActors.set(Number(player.id), actor);
-      } else if (actor.playerId !== null && !orderedRoster.length) {
-        this.playerActors.delete(actor.playerId);
+        this.playerActors.set(nextPlayerId, actor);
+      } else {
+        if (actor.playerId !== null && this.playerActors.get(actor.playerId) === actor) {
+          this.playerActors.delete(actor.playerId);
+        }
         actor.playerId = null;
         actor.playerName = '';
         actor.nameText.setText('');
+        actor.numberText.setText(String(i + 1));
       }
       actor.retiring = false;
       actor.container.setAlpha(1);
@@ -327,6 +397,19 @@ export class MatchScene extends Phaser.Scene {
     }
     if (side === 'HOME') this.homePlayers = next;
     else this.awayPlayers = next;
+  }
+
+  private updateActorKit(actor: Actor, side: Side, keeper: boolean) {
+    const isHome = side === 'HOME';
+    const jerseyColor = keeper ? (isHome ? 0xf5d84c : 0xffa23e) : (isHome ? 0x37b8ff : 0xff536d);
+    const shortsColor = keeper ? (isHome ? 0xb58d16 : 0xb84b22) : (isHome ? 0x11517f : 0x811f3e);
+    const accentColor = isHome ? 0xf4fcff : 0xffe9ed;
+    actor.jersey.setFillStyle(jerseyColor, 1).setStrokeStyle(1, accentColor, 0.9);
+    actor.leftArm.setFillStyle(jerseyColor, 1);
+    actor.rightArm.setFillStyle(jerseyColor, 1);
+    actor.stripe.setFillStyle(accentColor, 0.72);
+    actor.leftLeg.setFillStyle(shortsColor, 1);
+    actor.rightLeg.setFillStyle(shortsColor, 1);
   }
 
   private orderRoster(slots: FormationSlot[], roster: MatchVisualPlayer[]) {
@@ -443,6 +526,12 @@ export class MatchScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (this.scale.width <= 0 || this.scale.height <= 0) return;
+    if (this.pendingSnapshotReady) {
+      const snapshot = this.pendingSnapshot;
+      this.pendingSnapshot = null;
+      this.pendingSnapshotReady = false;
+      if (snapshot) this.applySnapshot(snapshot);
+    }
     // Fixed 60 Hz motion step, capped catch-up: the scene clock is never reset
     // by API polling and a WebView stall cannot cause a giant teleport.
     const frame = clamp(Number.isFinite(delta) ? delta : 0, 0, 50) / 1000;
@@ -501,10 +590,26 @@ export class MatchScene extends Phaser.Scene {
             targetX = ball.x - (side === 'HOME' ? -0.7 : 0.7);
             targetY = ball.y - attackingDirection * 0.4;
           } else {
-            const supportBoost = isForward ? 0.11 : (/^(CM|DM|AM)$/.test(actor.role) ? 0.055 : 0.015);
-            const ahead = clamp(ballProgress * supportBoost, -3, 10);
+            const isMidfielder = /^(CM|DM|AM)$/.test(actor.role);
+            const isWide = /^(LW|RW|LM|RM|LB|RB)$/.test(actor.role);
+            const supportBoost = isForward ? 0.15 : (isMidfielder ? 0.08 : 0.025);
+            const ahead = clamp(ballProgress * supportBoost, -3, 12);
             targetY += attackingDirection * ahead;
-            targetX += clamp((ball.x - anchor.x) * (isForward ? 0.1 : 0.045), -5, 5);
+
+            // Give the team in possession real, ball-aware off-ball runs. The
+            // previous small offsets kept every actor almost glued to the saved
+            // formation; forwards now attack the space ahead of the ball while
+            // wide players stretch the nearest channel. This is deterministic
+            // and based on ball/role/side, not a random sine-wave path.
+            const fieldThreat = clamp((ballProgress + 16) / 38, 0, 1);
+            if (isForward) targetY += attackingDirection * (2.2 + fieldThreat * 3.8);
+            else if (isMidfielder) targetY += attackingDirection * (0.8 + fieldThreat * 2.0);
+            if (isWide) {
+              const naturalLane = anchor.x < 50 ? -1 : 1;
+              targetX += naturalLane * (1.2 + fieldThreat * 2.0);
+            } else {
+              targetX += clamp((ball.x - anchor.x) * (isForward ? 0.13 : 0.065), -6, 6);
+            }
             if (actor === nearestDefender) targetY += attackingDirection * 2.4;
           }
         } else {
@@ -921,12 +1026,27 @@ export class MatchScene extends Phaser.Scene {
           this.possessionSide = null;
           this.carrier = null;
         }
-      } else if (kind === 'PASS' || kind === 'CROSS' || kind === 'CARRY') {
-        if (this.carrier) {
-          this.carrier.actionTarget = { ...motion.to };
-          this.carrier.actionUntil = this.gameTime + 0.28;
-        }
+      } else if (kind === 'PASS' || kind === 'CROSS' || kind === 'CARRY' || kind === 'INTERCEPTION') {
         this.possessionSide = side;
+        if (this.carrier && side) {
+          // Do not cancel the receiver's run the instant the ball arrives. The
+          // previous 280-ms reset replaced the longer receive/press action and
+          // sent the player straight back to the formation before he could run.
+          // On reception, carry the ball into a nearby open lane; the ball follows
+          // the receiver smoothly until the next authoritative match event.
+          const direction = side === 'HOME' ? 1 : -1;
+          const forwardRun = kind === 'CARRY' ? 8 : kind === 'CROSS' ? 3.5 : 6.5;
+          const laneOffset = this.carrier.anchor.x < motion.to.x ? -2.5 : 2.5;
+          const followTarget = {
+            x: clamp(motion.to.x + laneOffset, 5, 95),
+            y: clamp(motion.to.y + direction * forwardRun, 5, 95),
+          };
+          this.moveActorToward(this.carrier, followTarget, kind === 'CARRY' ? 1450 : 1200, 0);
+          // Keep enough time for the player to accelerate and visibly complete
+          // the post-reception run even on a slower mobile frame rate.
+          const minimumRun = kind === 'CARRY' ? 1.65 : 1.35;
+          this.carrier.actionUntil = Math.max(this.carrier.actionUntil, this.gameTime + minimumRun);
+        }
       }
       this.pendingGoalSide = null;
       this.pendingGoalOutcome = '';
@@ -961,7 +1081,14 @@ export class MatchScene extends Phaser.Scene {
       y: clamp(point.y + (actor.side === 'HOME' ? -offset : offset), 2, 98),
     };
     actor.actionTarget = target;
-    actor.actionUntil = this.gameTime + Math.max(0.22, durationMs / 1000);
+    const roleSpeed = actor.keeper ? 11 : (/^(ST|LW|RW|CF|AM|LM|RM)$/.test(actor.role) ? 17 : 13);
+    const distanceToTarget = Math.hypot(target.x - actor.pos.x, target.y - actor.pos.y);
+    // Action windows must cover the distance that the actor actually has to
+    // run. The old duration-only timer expired before distant players arrived,
+    // so the steering AI pulled them back to formation halfway through a run.
+    // Use a conservative effective speed to account for acceleration and turns.
+    const travelSeconds = distanceToTarget / Math.max(5, roleSpeed * 0.68) + 0.35;
+    actor.actionUntil = this.gameTime + clamp(Math.max(0.55, durationMs / 1000, travelSeconds), 0.55, 12);
     // The fixed-step steering loop handles acceleration and braking. Setting a
     // velocity impulse makes event actors start moving immediately without a
     // positional teleport or a second competing tween.

@@ -783,7 +783,7 @@ export class MatchScene extends Phaser.Scene {
         this.moveActorToward(actor, start, 300, 1.2);
         this.popActor(actor, kind === 'TACKLE' ? 1.18 : 1.08);
       }
-      if (kind === 'TACKLE' || kind === 'INTERCEPTION') {
+      if (kind === 'TACKLE') {
         this.possessionSide = side;
         this.carrier = actor ?? this.nearestActor(side, start);
       }

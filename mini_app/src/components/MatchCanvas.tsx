@@ -66,7 +66,6 @@ export default function MatchCanvas({ match }: MatchCanvasProps) {
           roundPixels: false,
           powerPreference: 'high-performance',
         },
-        resolution: Math.min(window.devicePixelRatio || 1, 1.5),
         scene: [MatchScene],
       });
       gameRef.current = game;

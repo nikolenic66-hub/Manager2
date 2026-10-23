@@ -1,0 +1,42 @@
+name: Hard Clear Git History
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clear-history:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Force Clear All Branches and History
+        run: |
+          # Удаляем все локальные ветки, кроме текущей
+          git branch | grep -v "\*" | xargs -r git branch -D
+          
+          # Создаем сиротскую ветку (без истории)
+          git checkout --orphan clean-main
+          
+          # Добавляем только текущие файлы
+          git add -A
+          git commit -m "chore: hard reset to clean history"
+          
+          # Удаляем старую ветку main и переименовываем новую
+          git branch -D main
+          git branch -m main
+          
+          # Пушим с силой
+          git push -f origin main
+          
+          # Удаляем все теги (если есть)
+          git push origin --delete $(git tag) || true

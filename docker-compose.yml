@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:17-alpine
+    command:
+      - postgres
+      - -c
+      - shared_buffers=16MB
+      - -c
+      - work_mem=1MB
+      - -c
+      - maintenance_work_mem=8MB
+      - -c
+      - max_connections=10
+      - -c
+      - max_parallel_workers=0
+      - -c
+      - max_parallel_workers_per_gather=0
+      - -c
+      - jit=off
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-football_manager}
+      POSTGRES_USER: ${POSTGRES_USER:-football}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    # PostgreSQL is internal to the compose network; expose it explicitly only for local tooling.
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  bot:
+    build: .
+    env_file: .env
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  postgres_data:

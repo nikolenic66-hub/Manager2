@@ -1,0 +1,176 @@
+name: Unpack release archives
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "*.zip"
+      - ".github/workflows/main.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: unpack-release
+  cancel-in-progress: false
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Check archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          archives=(./*.zip)
+
+          if [ "${#archives[@]}" -eq 0 ]; then
+            echo "ERROR: No ZIP archives found."
+            exit 1
+          fi
+
+          echo "Found archives:"
+          printf '  %s\n' "${archives[@]}"
+
+      - name: Extract archives
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf /tmp/extracted
+          mkdir -p /tmp/extracted
+
+          for p in ./*.zip; do
+            echo "Extracting: $p"
+            unzip -oq "$p" -d "/tmp/extracted"
+          done
+
+          echo "Extracted contents:"
+          ls -la /tmp/extracted
+
+      - name: Locate project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t candidates < <(
+            find /tmp/extracted \
+              -type f \
+              -path '*/app/bot.py' \
+              -printf '%h\n' |
+            sed 's#/app$##' |
+            sort -u
+          )
+
+          if [ "${#candidates[@]}" -ne 1 ]; then
+            echo "ERROR: Expected exactly one project."
+            echo "Found:"
+            printf '  %s\n' "${candidates[@]}"
+            exit 1
+          fi
+
+          PROJECT="${candidates[0]}"
+
+          for required in \
+            app/bot.py \
+            app/config.py \
+            app/db.py \
+            requirements.txt
+          do
+            if [ ! -f "$PROJECT/$required" ]; then
+              echo "ERROR: Missing $required"
+              exit 1
+            fi
+          done
+
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          echo "Project: $PROJECT"
+
+      - name: Preserve workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf "$PROJECT/.github"
+          cp -a .github "$PROJECT/.github"
+
+      - name: Replace repo contents
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find . \
+            -mindepth 1 \
+            -maxdepth 1 \
+            ! -name ".git" \
+            ! -name ".github" \
+            -exec rm -rf {} +
+
+          cp -a "$PROJECT"/. .
+
+          rm -f ./*.zip
+
+          find . \
+            -type d \
+            -name "__pycache__" \
+            -prune \
+            -exec rm -rf {} + 2>/dev/null || true
+
+          find . \
+            -type f \
+            -name "*.pyc" \
+            -delete
+
+          rm -rf .pytest_cache
+
+      - name: Commit
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+
+          git commit -m "Unpack release archives [skip ci]"
+
+      - name: Push
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "Push succeeded."
+              exit 0
+            fi
+            echo "Push failed (attempt $i). Retrying..."
+            git fetch origin main
+            git reset --soft origin/main
+            git add -A
+            if ! git diff --cached --quiet; then
+              git commit -m "Unpack release archives [skip ci]" || true
+            fi
+            sleep 5
+          done
+
+          echo "Push failed after 3 attempts."
+          exit 1

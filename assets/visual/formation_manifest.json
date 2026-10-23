@@ -1,0 +1,347 @@
+{
+  "4-3-3": {
+    "slots": [
+      {
+        "position": "GK",
+        "lateral": 50,
+        "depth": 8
+      },
+      {
+        "position": "LB",
+        "lateral": 15,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 38,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 62,
+        "depth": 25
+      },
+      {
+        "position": "RB",
+        "lateral": 85,
+        "depth": 25
+      },
+      {
+        "position": "CM",
+        "lateral": 30,
+        "depth": 48
+      },
+      {
+        "position": "DM",
+        "lateral": 50,
+        "depth": 45
+      },
+      {
+        "position": "CM",
+        "lateral": 70,
+        "depth": 48
+      },
+      {
+        "position": "LW",
+        "lateral": 15,
+        "depth": 72
+      },
+      {
+        "position": "ST",
+        "lateral": 50,
+        "depth": 82
+      },
+      {
+        "position": "RW",
+        "lateral": 85,
+        "depth": 72
+      }
+    ],
+    "counts": {
+      "GK": 1,
+      "LB": 1,
+      "CB": 2,
+      "RB": 1,
+      "CM": 2,
+      "DM": 1,
+      "LW": 1,
+      "ST": 1,
+      "RW": 1
+    }
+  },
+  "4-4-2": {
+    "slots": [
+      {
+        "position": "GK",
+        "lateral": 50,
+        "depth": 8
+      },
+      {
+        "position": "LB",
+        "lateral": 15,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 38,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 62,
+        "depth": 25
+      },
+      {
+        "position": "RB",
+        "lateral": 85,
+        "depth": 25
+      },
+      {
+        "position": "LM",
+        "lateral": 15,
+        "depth": 48
+      },
+      {
+        "position": "CM",
+        "lateral": 38,
+        "depth": 48
+      },
+      {
+        "position": "CM",
+        "lateral": 62,
+        "depth": 48
+      },
+      {
+        "position": "RM",
+        "lateral": 85,
+        "depth": 48
+      },
+      {
+        "position": "ST",
+        "lateral": 40,
+        "depth": 80
+      },
+      {
+        "position": "ST",
+        "lateral": 60,
+        "depth": 80
+      }
+    ],
+    "counts": {
+      "GK": 1,
+      "LB": 1,
+      "CB": 2,
+      "RB": 1,
+      "LM": 1,
+      "CM": 2,
+      "RM": 1,
+      "ST": 2
+    }
+  },
+  "4-2-3-1": {
+    "slots": [
+      {
+        "position": "GK",
+        "lateral": 50,
+        "depth": 8
+      },
+      {
+        "position": "LB",
+        "lateral": 15,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 38,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 62,
+        "depth": 25
+      },
+      {
+        "position": "RB",
+        "lateral": 85,
+        "depth": 25
+      },
+      {
+        "position": "DM",
+        "lateral": 40,
+        "depth": 45
+      },
+      {
+        "position": "DM",
+        "lateral": 60,
+        "depth": 45
+      },
+      {
+        "position": "LW",
+        "lateral": 18,
+        "depth": 67
+      },
+      {
+        "position": "AM",
+        "lateral": 50,
+        "depth": 67
+      },
+      {
+        "position": "RW",
+        "lateral": 82,
+        "depth": 67
+      },
+      {
+        "position": "ST",
+        "lateral": 50,
+        "depth": 82
+      }
+    ],
+    "counts": {
+      "GK": 1,
+      "LB": 1,
+      "CB": 2,
+      "RB": 1,
+      "DM": 2,
+      "LW": 1,
+      "AM": 1,
+      "RW": 1,
+      "ST": 1
+    }
+  },
+  "3-5-2": {
+    "slots": [
+      {
+        "position": "GK",
+        "lateral": 50,
+        "depth": 8
+      },
+      {
+        "position": "CB",
+        "lateral": 30,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 50,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 70,
+        "depth": 25
+      },
+      {
+        "position": "LM",
+        "lateral": 10,
+        "depth": 48
+      },
+      {
+        "position": "CM",
+        "lateral": 35,
+        "depth": 48
+      },
+      {
+        "position": "DM",
+        "lateral": 50,
+        "depth": 45
+      },
+      {
+        "position": "CM",
+        "lateral": 65,
+        "depth": 48
+      },
+      {
+        "position": "RM",
+        "lateral": 90,
+        "depth": 48
+      },
+      {
+        "position": "ST",
+        "lateral": 40,
+        "depth": 80
+      },
+      {
+        "position": "ST",
+        "lateral": 60,
+        "depth": 80
+      }
+    ],
+    "counts": {
+      "GK": 1,
+      "CB": 3,
+      "LM": 1,
+      "CM": 2,
+      "DM": 1,
+      "RM": 1,
+      "ST": 2
+    }
+  },
+  "5-3-2": {
+    "slots": [
+      {
+        "position": "GK",
+        "lateral": 50,
+        "depth": 8
+      },
+      {
+        "position": "LB",
+        "lateral": 10,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 30,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 50,
+        "depth": 25
+      },
+      {
+        "position": "CB",
+        "lateral": 70,
+        "depth": 25
+      },
+      {
+        "position": "RB",
+        "lateral": 90,
+        "depth": 25
+      },
+      {
+        "position": "CM",
+        "lateral": 32,
+        "depth": 50
+      },
+      {
+        "position": "DM",
+        "lateral": 50,
+        "depth": 48
+      },
+      {
+        "position": "CM",
+        "lateral": 68,
+        "depth": 50
+      },
+      {
+        "position": "ST",
+        "lateral": 40,
+        "depth": 80
+      },
+      {
+        "position": "ST",
+        "lateral": 60,
+        "depth": 80
+      }
+    ],
+    "counts": {
+      "GK": 1,
+      "LB": 1,
+      "CB": 3,
+      "RB": 1,
+      "CM": 2,
+      "DM": 1,
+      "ST": 2
+    }
+  }
+}
